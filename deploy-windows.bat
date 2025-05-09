@@ -9,7 +9,7 @@ echo.
 
 REM Check if Node.js is installed
 where node >nul 2>nul
-if %ERRORLEVEL% neq 0 (
+if !ERRORLEVEL! neq 0 (
     echo ERROR: Node.js is not installed or not in PATH.
     echo Please install Node.js v20 or later from https://nodejs.org/
     echo After installation, restart this script.
@@ -19,15 +19,15 @@ if %ERRORLEVEL% neq 0 (
 
 REM Check Node.js version
 for /f "tokens=*" %%i in ('node -v') do set NODE_VERSION=%%i
-echo Node.js version: %NODE_VERSION%
+echo Node.js version: !NODE_VERSION!
 echo.
 
 REM Check if pnpm is installed
 where pnpm >nul 2>nul
-if %ERRORLEVEL% neq 0 (
+if !ERRORLEVEL! neq 0 (
     echo PNPM is not installed. Installing it now...
     npm install -g pnpm
-    if %ERRORLEVEL% neq 0 (
+    if !ERRORLEVEL! neq 0 (
         echo Failed to install pnpm. Please install it manually with:
         echo npm install -g pnpm
         pause
@@ -163,7 +163,7 @@ if /i "!INSTALL_DEPS!"=="" set INSTALL_DEPS=y
 if /i "!INSTALL_DEPS!"=="y" (
     echo Installing dependencies...
     call pnpm install
-    if %ERRORLEVEL% neq 0 (
+    if !ERRORLEVEL! neq 0 (
         echo Failed to install dependencies.
         pause
         exit /b 1
@@ -195,7 +195,7 @@ if /i "!BUILD_APP!"=="y" (
         call pnpm run dev:agent-tars
     )
     
-    if %ERRORLEVEL% neq 0 (
+    if !ERRORLEVEL! neq 0 (
         echo Failed to build the application.
         pause
         exit /b 1
@@ -227,7 +227,7 @@ if /i "!PACKAGE_APP!"=="y" (
         call pnpm run package
     )
     
-    if %ERRORLEVEL% neq 0 (
+    if !ERRORLEVEL! neq 0 (
         echo Failed to package the application.
         cd ../..
         pause
