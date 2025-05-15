@@ -45,7 +45,6 @@ echo.
 
 REM Check if .env file already exists
 if exist .env (
-    echo An existing .env file was found.
     set /p OVERWRITE=Do you want to overwrite it? (y/n): 
     if /i "!OVERWRITE!" neq "y" (
         echo Keeping existing .env file.
@@ -69,24 +68,14 @@ set /p VLM_PROVIDER_NUM=Enter the number of your VLM provider (default: 1):
 
 if "!VLM_PROVIDER_NUM!"=="" set VLM_PROVIDER_NUM=1
 
-if "!VLM_PROVIDER_NUM!"=="1" (
-    set VLM_PROVIDER=openai
-) else if "!VLM_PROVIDER_NUM!"=="2" (
-    set VLM_PROVIDER=azure
-) else if "!VLM_PROVIDER_NUM!"=="3" (
-    set VLM_PROVIDER=anthropic
-) else if "!VLM_PROVIDER_NUM!"=="4" (
-    set VLM_PROVIDER=mistral
-) else if "!VLM_PROVIDER_NUM!"=="5" (
-    set VLM_PROVIDER=deepseek
-) else if "!VLM_PROVIDER_NUM!"=="6" (
-    set VLM_PROVIDER=gemini
-) else if "!VLM_PROVIDER_NUM!"=="7" (
-    set VLM_PROVIDER=huggingface
-) else (
-    echo Invalid selection. Using OpenAI as default.
-    set VLM_PROVIDER=openai
-)
+set VLM_PROVIDER=openai
+if "!VLM_PROVIDER_NUM!"=="1" set VLM_PROVIDER=openai
+if "!VLM_PROVIDER_NUM!"=="2" set VLM_PROVIDER=azure
+if "!VLM_PROVIDER_NUM!"=="3" set VLM_PROVIDER=anthropic
+if "!VLM_PROVIDER_NUM!"=="4" set VLM_PROVIDER=mistral
+if "!VLM_PROVIDER_NUM!"=="5" set VLM_PROVIDER=deepseek
+if "!VLM_PROVIDER_NUM!"=="6" set VLM_PROVIDER=gemini
+if "!VLM_PROVIDER_NUM!"=="7" set VLM_PROVIDER=huggingface
 
 echo.
 echo Selected VLM Provider: !VLM_PROVIDER!
@@ -101,6 +90,7 @@ if "!VLM_API_KEY!"=="" (
 )
 
 REM Base URL (optional for some providers)
+set VLM_BASE_URL=
 if "!VLM_PROVIDER!"=="huggingface" (
     set /p VLM_BASE_URL=Enter your HuggingFace endpoint URL: 
 ) else if "!VLM_PROVIDER!"=="azure" (
@@ -108,11 +98,10 @@ if "!VLM_PROVIDER!"=="huggingface" (
 ) else if "!VLM_PROVIDER!"=="openai" (
     set /p VLM_BASE_URL=Enter your OpenAI API URL (press Enter for default): 
     if "!VLM_BASE_URL!"=="" set VLM_BASE_URL=https://api.openai.com/v1
-) else (
-    set VLM_BASE_URL=
 )
 
 REM Model Name
+set VLM_MODEL_NAME=
 if "!VLM_PROVIDER!"=="openai" (
     set /p VLM_MODEL_NAME=Enter the model name (default: gpt-4-vision-preview): 
     if "!VLM_MODEL_NAME!"=="" set VLM_MODEL_NAME=gpt-4-vision-preview
@@ -135,6 +124,7 @@ if "!VLM_PROVIDER!"=="openai" (
 )
 
 REM Additional Azure settings if needed
+set AZURE_API_VERSION=
 if "!VLM_PROVIDER!"=="azure" (
     set /p AZURE_API_VERSION=Enter Azure API version (default: 2023-05-15): 
     if "!AZURE_API_VERSION!"=="" set AZURE_API_VERSION=2023-05-15
@@ -159,7 +149,7 @@ echo.
 
 REM Ask if user wants to install dependencies
 set /p INSTALL_DEPS=Do you want to install dependencies? (y/n, default: y): 
-if /i "!INSTALL_DEPS!"=="" set INSTALL_DEPS=y
+if "!INSTALL_DEPS!"=="" set INSTALL_DEPS=y
 if /i "!INSTALL_DEPS!"=="y" (
     echo Installing dependencies...
     call pnpm install
@@ -176,7 +166,7 @@ echo.
 
 REM Ask if user wants to build the application
 set /p BUILD_APP=Do you want to build the application? (y/n, default: y): 
-if /i "!BUILD_APP!"=="" set BUILD_APP=y
+if "!BUILD_APP!"=="" set BUILD_APP=y
 if /i "!BUILD_APP!"=="y" (
     echo Building the application...
     
@@ -208,7 +198,7 @@ echo.
 
 REM Ask if user wants to package the application
 set /p PACKAGE_APP=Do you want to package the application for distribution? (y/n, default: n): 
-if /i "!PACKAGE_APP!"=="" set PACKAGE_APP=n
+if "!PACKAGE_APP!"=="" set PACKAGE_APP=n
 if /i "!PACKAGE_APP!"=="y" (
     echo Packaging the application...
     
@@ -257,3 +247,4 @@ echo.
 
 pause
 endlocal
+
