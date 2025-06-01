@@ -5,19 +5,29 @@ import {
   AppUpdater as ElectronAppUpdater,
   autoUpdater,
 } from 'electron-updater';
+import { CustomGitHubProvider } from '@main/electron-updater/GitHubProvider';
 
 export class AppUpdater {
   autoUpdater: ElectronAppUpdater = autoUpdater;
 
   checkReleaseName(releaseName: string | undefined | null): boolean {
     return Boolean(
-      releaseName && /agent[-\s]?tars/i.test(releaseName.toLowerCase()),
+      releaseName && /agent[-.\s]?tars/i.test(releaseName.toLowerCase()),
     );
   }
 
   constructor(mainWindow: BrowserWindow) {
     autoUpdater.logger = logger;
     autoUpdater.autoDownload = false;
+
+    autoUpdater.setFeedURL({
+      // hack for custom provider
+      provider: 'custom' as 'github',
+      owner: 'bytedance',
+      repo: 'UI-TARS-desktop',
+      // @ts-expect-error hack for custom provider
+      updateProvider: CustomGitHubProvider,
+    });
 
     autoUpdater.on('error', (error) => {
       logger.error('Update_Error', error);
@@ -26,8 +36,9 @@ export class AppUpdater {
 
     autoUpdater.on('update-available', (releaseInfo: UpdateInfo) => {
       logger.info('new version', releaseInfo);
+      const appName = releaseInfo?.files?.[0]?.url;
 
-      if (this.checkReleaseName(releaseInfo?.releaseName)) {
+      if (this.checkReleaseName(appName)) {
         mainWindow.webContents.send('app-update-available', releaseInfo);
         autoUpdater.downloadUpdate();
       } else {
