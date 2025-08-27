@@ -1,0 +1,138 @@
+[
+  {
+    "id": "57ca13a1-ccfa-41c5-a9f0-fb91847ca49e",
+    "type": "user_message",
+    "timestamp": 1755542762607,
+    "content": "How's the weather today?"
+  },
+  {
+    "id": "0879aaba-aeec-47bc-a069-edc0b089a2ec",
+    "type": "agent_run_start",
+    "timestamp": 1755542762607,
+    "sessionId": "1755542762607-h6fk0lb",
+    "runOptions": {
+      "input": "How's the weather today?"
+    },
+    "provider": "volcengine",
+    "model": "ep-20250510145437-5sxhs",
+    "agentName": "Anonymous"
+  },
+  {
+    "id": "959ce323-36d6-4df7-b948-88008ea8ac02",
+    "type": "assistant_message",
+    "timestamp": 1755542762610,
+    "content": "",
+    "rawContent": "<tool_call>\n{\n  \"name\": \"getCurrentLocation\",\n  \"parameters\": {}\n}\n</tool_call>",
+    "toolCalls": [
+      {
+        "id": "call_1755542762609_kiaauknw3",
+        "type": "function",
+        "function": {
+          "name": "getCurrentLocation",
+          "arguments": "{}"
+        }
+      }
+    ],
+    "finishReason": "tool_calls",
+    "messageId": "msg_1755542762608_jlvcwi3e"
+  },
+  {
+    "id": "a3ab5aad-43a1-4df9-bf2d-75d1a2ef35dc",
+    "type": "tool_call",
+    "timestamp": 1755542762610,
+    "toolCallId": "call_1755542762609_kiaauknw3",
+    "name": "getCurrentLocation",
+    "arguments": {},
+    "startTime": 1755542762610,
+    "tool": {
+      "name": "getCurrentLocation",
+      "description": "Get user's current location",
+      "schema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "id": "49868487-8db0-4922-929d-985e711feb8d",
+    "type": "tool_result",
+    "timestamp": 1755542762610,
+    "toolCallId": "call_1755542762609_kiaauknw3",
+    "name": "getCurrentLocation",
+    "content": {
+      "location": "Boston"
+    },
+    "elapsedMs": 0
+  },
+  {
+    "id": "2f708721-fed2-440e-a44a-8ca0fa34d300",
+    "type": "assistant_message",
+    "timestamp": 1755542762612,
+    "content": "",
+    "rawContent": "<tool_call>\n{\n  \"name\": \"getWeather\",\n  \"parameters\": {\n    \"location\": \"Boston\"\n  }\n}\n</tool_call>",
+    "toolCalls": [
+      {
+        "id": "call_1755542762612_5r95gnu72",
+        "type": "function",
+        "function": {
+          "name": "getWeather",
+          "arguments": "{\"location\":\"Boston\"}"
+        }
+      }
+    ],
+    "finishReason": "tool_calls",
+    "messageId": "msg_1755542762611_cykh92pt"
+  },
+  {
+    "id": "29694160-bd78-471b-8ccd-8a6cbc80766d",
+    "type": "tool_call",
+    "timestamp": 1755542762613,
+    "toolCallId": "call_1755542762612_5r95gnu72",
+    "name": "getWeather",
+    "arguments": {
+      "location": "Boston"
+    },
+    "startTime": 1755542762613,
+    "tool": {
+      "name": "getWeather",
+      "description": "Get weather information for a specified location",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Location name, such as city name"
+          }
+        },
+        "required": [
+          "location"
+        ]
+      }
+    }
+  },
+  {
+    "id": "90120047-3cad-427b-93a3-f3c4fe119a24",
+    "type": "tool_result",
+    "timestamp": 1755542762613,
+    "toolCallId": "call_1755542762612_5r95gnu72",
+    "name": "getWeather",
+    "content": {
+      "location": "Boston",
+      "temperature": "70°F (21°C)",
+      "condition": "Sunny",
+      "precipitation": "10%",
+      "humidity": "45%",
+      "wind": "5 mph"
+    },
+    "elapsedMs": 0
+  },
+  {
+    "id": "0eb07c22-b92b-4e4a-bc5e-ebf96bead6b2",
+    "type": "assistant_message",
+    "timestamp": 1755542762615,
+    "content": "In Boston today, the weather is sunny with a temperature of 70°F (21°C). The precipitation chance is 10%, humidity is 45%, and the wind speed is 5 mph.",
+    "rawContent": "In Boston today, the weather is sunny with a temperature of 70°F (21°C). The precipitation chance is 10%, humidity is 45%, and the wind speed is 5 mph.",
+    "finishReason": "stop",
+    "messageId": "msg_1755542762614_x1634t77"
+  }
+]

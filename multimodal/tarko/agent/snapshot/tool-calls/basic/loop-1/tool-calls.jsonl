@@ -1,0 +1,11 @@
+[
+  {
+    "toolCallId": "call_1755542762579_kmx03",
+    "name": "getCurrentLocation",
+    "args": {},
+    "result": {
+      "location": "Boston"
+    },
+    "executionTime": 1
+  }
+]

@@ -13,7 +13,7 @@ import MenuBuilder from '@main/menu';
 
 import icon from '@resources/icon.png?asset';
 
-let appUpdater;
+let appUpdater: AppUpdater;
 
 export function createWindow({
   width,
@@ -47,8 +47,8 @@ export function createWindow({
         ...baseWindowConfig,
         titleBarStyle: 'hiddenInset',
         trafficLightPosition: {
-          x: 16,
-          y: 16,
+          x: 9,
+          y: 9,
         },
         visualEffectState: 'active',
         vibrancy: 'under-window',
@@ -113,3 +113,5 @@ export function createWindow({
 
   return browserWindow;
 }
+
+export { appUpdater };

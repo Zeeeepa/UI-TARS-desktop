@@ -1,5 +1,30 @@
 # @agent-infra/browser-search
 
+## 0.0.5
+
+### Patch Changes
+
+- feat(browser-search): release issues
+  - @agent-infra/shared@0.0.2
+
+## 0.0.4
+
+### Patch Changes
+
+- 941c26c: feat(browser-search): support `cdpEndpoint` to connect to remote browser
+  - @agent-infra/shared@0.0.2
+
+## 0.0.3
+
+### Patch Changes
+
+- a85ef50: chore: publish
+- Updated dependencies [eb293fb]
+- Updated dependencies [a85ef50]
+- Updated dependencies [eb293fb]
+  - @agent-infra/shared@0.0.2
+  - @agent-infra/browser@0.1.1
+
 ## 0.0.3-beta.3
 
 ### Patch Changes

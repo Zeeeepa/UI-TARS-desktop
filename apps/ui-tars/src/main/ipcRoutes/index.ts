@@ -8,6 +8,8 @@ import { windowRoute } from './window';
 import { permissionRoute } from './permission';
 import { agentRoute } from './agent';
 import { browserRoute } from './browser';
+import { remoteResourceRouter } from './remoteResource';
+import { settingRoute } from './setting';
 
 const t = initIpc.create();
 
@@ -16,7 +18,9 @@ export const ipcRoutes = t.router({
   ...windowRoute,
   ...permissionRoute,
   ...agentRoute,
+  ...remoteResourceRouter,
   ...browserRoute,
+  ...settingRoute,
 });
 export type Router = typeof ipcRoutes;
 

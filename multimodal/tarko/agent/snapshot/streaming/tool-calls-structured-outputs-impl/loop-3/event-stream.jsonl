@@ -1,0 +1,193 @@
+[
+  {
+    "id": "1a622ca4-ba96-4b7f-99a9-357960786896",
+    "type": "user_message",
+    "timestamp": 1752414641314,
+    "content": "How's the weather today?"
+  },
+  {
+    "id": "9457dc94-bcb1-4945-97af-5be7a68bc07a",
+    "type": "agent_run_start",
+    "timestamp": 1752414641314,
+    "sessionId": "1752414641314-qhjmf5m",
+    "runOptions": {
+      "input": "How's the weather today?",
+      "stream": true
+    },
+    "provider": "azure-openai",
+    "model": "aws_sdk_claude37_sonnet"
+  },
+  {
+    "id": "8d693b1c-c265-4d77-bc97-de431a690a39",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414642831,
+    "content": "I",
+    "isComplete": false,
+    "messageId": "msg_1752414642824_fx94m3zs"
+  },
+  {
+    "id": "a2c15322-b403-4063-b2ca-8d236ed94ca3",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414643136,
+    "content": "'ll check the weather for you. First",
+    "isComplete": false,
+    "messageId": "msg_1752414642824_fx94m3zs"
+  },
+  {
+    "id": "af6aabe1-0223-4239-8a93-7465e9aa9fdf",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414643243,
+    "content": ", I need to find your current location.",
+    "isComplete": false,
+    "messageId": "msg_1752414642824_fx94m3zs"
+  },
+  {
+    "id": "08fb0c15-e68c-4ecb-b4d1-411eb4b6b1dc",
+    "type": "assistant_message",
+    "timestamp": 1752414643888,
+    "content": "I'll check the weather for you. First, I need to find your current location.",
+    "rawContent": "I'll check the weather for you. First, I need to find your current location.",
+    "toolCalls": [
+      {
+        "id": "call_1752414643888_bl9kp",
+        "type": "function",
+        "function": {
+          "name": "getCurrentLocation",
+          "arguments": "{}"
+        }
+      }
+    ],
+    "finishReason": "tool_calls",
+    "messageId": "msg_1752414642824_fx94m3zs"
+  },
+  {
+    "id": "b1ab70c0-352d-4a78-b80f-a4dc7a256c3f",
+    "type": "tool_call",
+    "timestamp": 1752414643889,
+    "toolCallId": "call_1752414643888_bl9kp",
+    "name": "getCurrentLocation",
+    "arguments": {},
+    "startTime": 1752414643889,
+    "tool": {
+      "name": "getCurrentLocation",
+      "description": "Get user's current location",
+      "schema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "id": "c53dbaeb-57a7-4cb0-b826-60de882a6217",
+    "type": "tool_result",
+    "timestamp": 1752414643889,
+    "toolCallId": "call_1752414643888_bl9kp",
+    "name": "getCurrentLocation",
+    "content": {
+      "location": "Boston"
+    },
+    "elapsedMs": 0
+  },
+  {
+    "id": "bbf1587e-e630-4074-ae54-bfaeb260394c",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414645612,
+    "content": "I",
+    "isComplete": false,
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "ee69ec9e-96cf-46a8-8b72-98ea44b7b764",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414645857,
+    "content": "'ll",
+    "isComplete": false,
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "1fed93a0-3c2f-4463-bd0d-bff91daaaf1e",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414645857,
+    "content": " check the current",
+    "isComplete": false,
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "5fdd6106-0249-4785-8e82-8dbded6f02ea",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414645857,
+    "content": " weather in",
+    "isComplete": false,
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "bbc7d55e-0b0f-4aeb-bf16-7545135fe247",
+    "type": "assistant_streaming_message",
+    "timestamp": 1752414645857,
+    "content": " Boston for you.",
+    "isComplete": false,
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "eeeababa-7ef7-42d4-90fc-f9cc7541d6ab",
+    "type": "assistant_message",
+    "timestamp": 1752414646375,
+    "content": "I'll check the current weather in Boston for you.",
+    "rawContent": "I'll check the current weather in Boston for you.",
+    "toolCalls": [
+      {
+        "id": "call_1752414646375_s0cro",
+        "type": "function",
+        "function": {
+          "name": "getWeather",
+          "arguments": "{\"location\":\"Boston\"}"
+        }
+      }
+    ],
+    "finishReason": "tool_calls",
+    "messageId": "msg_1752414645426_l2u4ruw9"
+  },
+  {
+    "id": "6e58cc86-e792-4c70-9922-36484a8e91c8",
+    "type": "tool_call",
+    "timestamp": 1752414646377,
+    "toolCallId": "call_1752414646375_s0cro",
+    "name": "getWeather",
+    "arguments": {
+      "location": "Boston"
+    },
+    "startTime": 1752414646377,
+    "tool": {
+      "name": "getWeather",
+      "description": "Get weather information for a specified location",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Location name, such as city name"
+          }
+        },
+        "required": [
+          "location"
+        ]
+      }
+    }
+  },
+  {
+    "id": "3afe8206-c9f6-4447-9fce-9b4385ef40b9",
+    "type": "tool_result",
+    "timestamp": 1752414646383,
+    "toolCallId": "call_1752414646375_s0cro",
+    "name": "getWeather",
+    "content": {
+      "location": "Boston",
+      "temperature": "70°F (21°C)",
+      "condition": "Sunny",
+      "precipitation": "10%",
+      "humidity": "45%",
+      "wind": "5 mph"
+    },
+    "elapsedMs": 0
+  }
+]

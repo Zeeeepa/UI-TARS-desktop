@@ -3,11 +3,28 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Turndown from 'turndown';
+import Turndown, { TagName } from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
+
+export const DEFAULT_TAGS_TO_REMOVE: TagName[] = [
+  'script',
+  'style',
+  'link',
+  'head',
+  'iframe',
+  'video',
+  'audio',
+  'canvas',
+  'object',
+  'embed',
+  'noscript',
+  'aside',
+  'dialog',
+];
 
 export interface ToMarkdownOptions extends Turndown.Options {
   gfmExtension?: boolean;
+  removeTags?: TagName[];
 }
 
 /**
@@ -29,6 +46,7 @@ export function toMarkdown(
       emDelimiter = '*',
       strongDelimiter = '**',
       gfmExtension = true,
+      removeTags = DEFAULT_TAGS_TO_REMOVE,
     } = options;
 
     const turndown = new Turndown({
@@ -37,6 +55,9 @@ export function toMarkdown(
       emDelimiter,
       strongDelimiter,
     });
+
+    // issue: https://github.com/mixmark-io/turndown/issues/210#issuecomment-353666857
+    turndown.remove(removeTags);
 
     if (gfmExtension) {
       turndown.use(gfm);

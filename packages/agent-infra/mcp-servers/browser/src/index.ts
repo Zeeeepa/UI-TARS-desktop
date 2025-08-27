@@ -9,8 +9,18 @@
  */
 import { startSseAndStreamableHttpMcpServer } from 'mcp-http-server';
 import { program } from 'commander';
+import { BaseLogger } from '@agent-infra/logger';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createServer, getBrowser } from './server.js';
+import { createServer, getBrowser, setConfig, getConfig } from './server.js';
+import { ContextOptions, GlobalConfig } from './typings.js';
+import { parserFactor, parseViewportSize } from './utils/utils.js';
+import {
+  setRequestContext,
+  getRequestContext,
+  onBeforeStart,
+  addMiddleware,
+  getMiddlewares,
+} from './request-context.js';
 
 declare global {
   interface Window {
@@ -70,7 +80,7 @@ program
   //   '--no-sandbox',
   //   'disable the sandbox for all process types that are normally sandboxed.',
   // )
-  // .option('--output-dir <path>', 'path to the directory for output files.')
+  .option('--output-dir <path>', 'path to the directory for output files.')
   .option('--port <port>', 'port to listen on for SSE and HTTP transport.')
   .option(
     '--proxy-bypass <bypass>',
@@ -98,11 +108,17 @@ program
     '--vision',
     'Run server that uses screenshots (Aria snapshots are used by default)',
   )
+  .hook('preAction', async () => {
+    // console.log(
+    //   '[mcp-server-browser] Initializing middlewares and configurations...',
+    // );
+  })
   .action(async (options) => {
     try {
-      console.log('[mcp-server-browser] options', options);
-
-      const createMcpServer = async () => {
+      const createMcpServer = async (
+        mcpServerConfig: ContextOptions & Pick<GlobalConfig, 'logger'> = {},
+      ) => {
+        const { logger, ...contextOptions } = mcpServerConfig;
         const server = createServer({
           ...((options.cdpEndpoint || options.wsEndpoint) && {
             remoteOptions: {
@@ -110,6 +126,7 @@ program
               cdpEndpoint: options.cdpEndpoint,
             },
           }),
+          logger,
           vision: options.vision,
           launchOptions: {
             headless: options.headless,
@@ -120,70 +137,61 @@ program
             args: [
               process.env.DISPLAY ? `--display=${process.env.DISPLAY}` : '',
             ],
-            ...(options.viewportSize && {
-              defaultViewport: {
-                width: parseInt(options.viewportSize?.split(',')[0]),
-                height: parseInt(options.viewportSize?.split(',')[1]),
-              },
+            ...(contextOptions.viewportSize && {
+              defaultViewport: contextOptions.viewportSize,
             }),
             ...(options.userDataDir && {
               userDataDir: options.userDataDir,
             }),
           },
-          contextOptions: {
-            userAgent: options.userAgent,
-          },
-          logger: {
-            info: (...args: any[]) => {
-              server.server.notification({
-                method: 'notifications/message',
-                params: {
-                  level: 'warning',
-                  logger: 'mcp-server-browser',
-                  data: JSON.stringify(args),
-                },
-              });
-
-              server.server.sendLoggingMessage({
-                level: 'info',
-                data: JSON.stringify(args),
-              });
-            },
-            error: (...args: any[]) => {
-              server.server.sendLoggingMessage({
-                level: 'error',
-                data: JSON.stringify(args),
-              });
-            },
-            warn: (...args: any[]) => {
-              server.server.sendLoggingMessage({
-                level: 'warning',
-                data: JSON.stringify(args),
-              });
-            },
-            debug: (...args: any[]) => {
-              server.server.sendLoggingMessage({
-                level: 'debug',
-                data: JSON.stringify(args),
-              });
-            },
-          },
+          contextOptions,
         });
 
         return server;
       };
       if (options.port || options.host) {
+        const config = getConfig();
+        const middlewares = getMiddlewares();
+
         await startSseAndStreamableHttpMcpServer({
           host: options.host,
           port: options.port,
+          middlewares,
+          logger: config.logger,
           // @ts-expect-error: CommonJS and ESM compatibility
-          createMcpServer: async () => {
-            const server = await createMcpServer();
+          createMcpServer: async (req) => {
+            setRequestContext(req);
+
+            const userAgent = req?.headers?.['x-user-agent'] as string;
+
+            // header priority: req.headers > process.env.VISION_FACTOR
+            const factors =
+              req?.headers?.['x-vision-factors'] ||
+              process.env.VISION_FACTOR ||
+              '';
+            // x-viewport-size: width,height
+            const viewportSize =
+              req?.headers?.['x-viewport-size'] || options.viewportSize;
+
+            const server = await createMcpServer({
+              userAgent,
+              factors: parserFactor(factors as string),
+              viewportSize: parseViewportSize(viewportSize as string),
+            });
             return server;
           },
         });
       } else {
-        const server = await createMcpServer();
+        const server = await createMcpServer({
+          userAgent: options.userAgent,
+          /**
+           * The server MUST NOT write anything to its stdout that is not a valid MCP message.
+           * issue: https://github.com/bytedance/UI-TARS-desktop/issues/888#issuecomment-3125273977
+           */
+          logger: new BaseLogger(),
+          viewportSize: parseViewportSize(options.viewportSize),
+          factors: parserFactor(process.env.VISION_FACTOR || ''),
+        });
         const transport = new StdioServerTransport();
         await server.connect(transport);
       }
@@ -193,10 +201,19 @@ program
     }
   });
 
-program.parse();
+program.parseAsync();
 
 process.stdin.on('close', () => {
   const { browser } = getBrowser();
   console.error('Puppeteer MCP Server closed');
   browser?.close();
 });
+
+// @deprecated: use request-context.js instead
+export {
+  setConfig,
+  BaseLogger,
+  getRequestContext,
+  onBeforeStart,
+  addMiddleware,
+};

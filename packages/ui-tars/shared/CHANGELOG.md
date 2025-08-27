@@ -1,5 +1,13 @@
 # @ui-tars/shared
 
+## 1.2.3
+
+## 1.2.2
+
+### Patch Changes
+
+- a85ef50: chore: publish
+
 ## 1.2.2-beta.3
 
 ## 1.2.2-beta.2

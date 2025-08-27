@@ -10,3 +10,5 @@ test-results/
 coverage/
 .turbo/
 scripts/merge-yml/*.yml
+.claude/
+.tarko
