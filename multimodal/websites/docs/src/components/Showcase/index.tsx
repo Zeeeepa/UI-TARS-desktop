@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spinner, Button } from '@nextui-org/react';
 import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
@@ -95,8 +95,11 @@ export const Showcase: React.FC = () => {
       isLoading={isLoading}
       error={error}
       onRetry={refetch}
-      onNavigateToDetail={(item) => {
-        navigate(`/showcase/${encodeURIComponent(item.id)}`);
+      onNavigateToDetail={(item, activeCategory) => {
+        // Pass current category as state to preserve filter when navigating back
+        navigate(`/showcase/${encodeURIComponent(item.id)}`, {
+          state: { previousCategory: activeCategory !== 'all' ? activeCategory : null }
+        });
       }}
     />
   );
@@ -108,7 +111,7 @@ interface ShowcaseListPageProps {
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
-  onNavigateToDetail: (item: ShowcaseItem) => void;
+  onNavigateToDetail: (item: ShowcaseItem, activeCategory: string) => void;
 }
 
 const ShowcaseListPage: React.FC<ShowcaseListPageProps> = ({
@@ -119,7 +122,32 @@ const ShowcaseListPage: React.FC<ShowcaseListPageProps> = ({
   onRetry,
   onNavigateToDetail,
 }) => {
-  const [activeCategory, setActiveCategory] = useState('all');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
+  
+  // Get category from URL params, default to 'all'
+  const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
+  
+  // Update URL when category changes
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    const newSearchParams = new URLSearchParams(location.search);
+    if (categoryId === 'all') {
+      newSearchParams.delete('category');
+    } else {
+      newSearchParams.set('category', categoryId);
+    }
+    navigate(`/showcase${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''}`, { replace: true });
+  };
+  
+  // Sync state with URL changes (for browser back/forward)
+  useEffect(() => {
+    const currentCategory = searchParams.get('category') || 'all';
+    if (currentCategory !== activeCategory) {
+      setActiveCategory(currentCategory);
+    }
+  }, [location.search]);
 
   const filteredItems = useMemo(() => {
     return processedData?.getItemsByCategory(activeCategory) || [];
@@ -180,7 +208,7 @@ const ShowcaseListPage: React.FC<ShowcaseListPageProps> = ({
         <CategoryFilter
           categories={categoriesWithCounts}
           activeCategory={activeCategory}
-          onSelectCategory={setActiveCategory}
+          onSelectCategory={handleCategoryChange}
         />
 
         {isLoading ? (
@@ -210,7 +238,7 @@ const ShowcaseListPage: React.FC<ShowcaseListPageProps> = ({
                       key={item.id}
                       item={item}
                       index={index}
-                      onOpenPreview={onNavigateToDetail}
+                      onOpenPreview={(item) => onNavigateToDetail(item, activeCategory)}
                     />
                   ))}
                 </div>
@@ -266,6 +294,7 @@ const ShowcaseDetailPage: React.FC<ShowcaseDetailPageProps> = ({
   onRetry,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Set meta for detail page based on loaded item
   React.useEffect(() => {
@@ -383,7 +412,17 @@ const ShowcaseDetailPage: React.FC<ShowcaseDetailPageProps> = ({
     );
   }
 
-  return <ShowcaseDetail item={items[0]} onBack={() => navigate('/showcase')} />;
+  const handleBackToShowcase = () => {
+    // Use navigation state to preserve category filter
+    const previousCategory = location.state?.previousCategory;
+    if (previousCategory) {
+      navigate(`/showcase?category=${previousCategory}`);
+    } else {
+      navigate('/showcase');
+    }
+  };
+  
+  return <ShowcaseDetail item={items[0]} onBack={handleBackToShowcase} />;
 };
 
 export default Showcase;
