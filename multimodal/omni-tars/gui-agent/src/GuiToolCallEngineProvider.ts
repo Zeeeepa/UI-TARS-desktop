@@ -3,7 +3,7 @@
  * Provides optimized tool call engine for GUI automation and computer use tasks
  */
 
-import { ToolCallEngineProvider, ToolCallEngineContext } from '@omni-tars/core';
+import { ToolCallEngineProvider, ToolCallEngineContext, AgentMode } from '@omni-tars/core';
 import { GUIAgentToolCallEngine } from './GUIAgentToolCallEngine';
 
 export class GuiToolCallEngineProvider extends ToolCallEngineProvider<GUIAgentToolCallEngine> {
@@ -11,13 +11,53 @@ export class GuiToolCallEngineProvider extends ToolCallEngineProvider<GUIAgentTo
   readonly priority = 90; // High priority for GUI tasks
   readonly description =
     'Tool call engine optimized for GUI automation, computer use, and visual interface interactions';
+  private agentMode: AgentMode;
+
+  constructor(agentMode: AgentMode) {
+    super();
+    this.agentMode = agentMode;
+  }
 
   protected createEngine(): GUIAgentToolCallEngine {
-    return new GUIAgentToolCallEngine();
+    return new GUIAgentToolCallEngine(this.agentMode);
   }
 
   canHandle(context: ToolCallEngineContext): boolean {
-    // Check if the latest model output contains <computer_env></computer_env> tags
+    //Check if any tools are GUI/computer use related
+    if (context.toolCalls) {
+      const toolNames = [
+        'call_user',
+        'click',
+        'drag',
+        'finished',
+        'hotkey',
+        'left_double',
+        'mouse_down',
+        'mouse_up',
+        'move_to',
+        'press',
+        'release',
+        'right_single',
+        'scroll',
+        'type',
+        'wait',
+      ];
+
+      if (this.agentMode.id !== 'game') {
+        toolNames.push('navigate');
+        toolNames.push('navigate_back');
+      }
+
+      const hasGuiTools = context?.toolCalls?.some((tool) =>
+        toolNames.some((guiName) =>
+          tool.function.name.toLowerCase().includes(guiName.toLowerCase()),
+        ),
+      );
+
+      return !!hasGuiTools;
+    }
+
+    // Fallback: Check if the latest model output contains <computer_env></computer_env> tags
     if (context.latestAssistantMessage) {
       const hasComputerEnvTags = context.latestAssistantMessage.includes('<computer_env>');
       if (hasComputerEnvTags) {
@@ -25,28 +65,6 @@ export class GuiToolCallEngineProvider extends ToolCallEngineProvider<GUIAgentTo
       }
     }
 
-    // Fallback: Check if any tools are GUI/computer use related
-    const guiToolNames = [
-      'screenshot',
-      'click',
-      'type',
-      'scroll',
-      'computer_use',
-      'gui',
-      'mouse',
-      'keyboard',
-      'window',
-      'screen',
-      'capture',
-      'browser',
-    ];
-
-    const hasGuiTools = context?.toolCalls?.some((tool) =>
-      guiToolNames.some((guiName) =>
-        tool.function.name.toLowerCase().includes(guiName.toLowerCase()),
-      ),
-    );
-
-    return !!hasGuiTools;
+    return false;
   }
 }

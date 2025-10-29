@@ -13,16 +13,22 @@ import {
   MultimodalToolCallResult,
   ParsedModelResponse,
   StreamChunkResult,
-  StreamProcessingState,
 } from '@tarko/agent-interface';
-import { parseMcpContent } from '@omni-tars/core';
+import {
+  parseMcpContent,
+  processT5StreamingChunk as omniProcessStreamingChunk,
+  T5StreamProcessingState as OmniStreamProcessingState,
+  createT5InitState as createInitState,
+  SYSTEM_PROMPT_GROUP,
+} from '@omni-tars/core';
 
-export class McpToolCallEngine extends ToolCallEngine {
+export class McpToolCallEngine extends ToolCallEngine<OmniStreamProcessingState> {
   private logger = getLogger('McpToolCallEngine');
 
-  preparePrompt(instructions: string, tools: Tool[]): string {
-    return instructions;
+  preparePrompt(instructions: string, tools: Tool[]) {
+    return SYSTEM_PROMPT_GROUP;
   }
+
   prepareRequest(context: ToolCallEnginePrepareRequestContext): ChatCompletionCreateParams {
     return {
       model: context.model,
@@ -35,55 +41,36 @@ export class McpToolCallEngine extends ToolCallEngine {
       // stop_sequences: ['</code_env>', '</mcp_env>'],
     };
   }
-  initStreamProcessingState(): StreamProcessingState {
-    return {
-      contentBuffer: '',
-      toolCalls: [],
-      reasoningBuffer: '',
-      finishReason: null,
-    };
+
+  initStreamProcessingState(): OmniStreamProcessingState {
+    return createInitState();
   }
 
   processStreamingChunk(
     chunk: ChatCompletionChunk,
-    state: StreamProcessingState,
+    state: OmniStreamProcessingState,
   ): StreamChunkResult {
-    const delta = chunk.choices[0]?.delta;
-
-    // Accumulate content
-    if (delta?.content) {
-      state.contentBuffer += delta.content;
-    }
-
-    // Record finish reason
-    if (chunk.choices[0]?.finish_reason) {
-      state.finishReason = chunk.choices[0].finish_reason;
-    }
-
-    // Return incremental content without tool call detection during streaming
-    return {
-      // content: delta?.content || '',
-      content: '',
-      reasoningContent: '',
-      hasToolCallUpdate: false,
-      toolCalls: [],
-    };
+    return omniProcessStreamingChunk(chunk, state);
   }
-  finalizeStreamProcessing(state: StreamProcessingState): ParsedModelResponse {
+
+  finalizeStreamProcessing(state: OmniStreamProcessingState): ParsedModelResponse {
+    this.logger.info('finalizeStreamProcessing state \n', state);
+    let tools = state.toolCalls;
     const fullContent = state.contentBuffer;
-    this.logger.info('finalizeStreamProcessing content \n', fullContent);
 
-    // const extracted = this.parseContent(fullContent);
-    const extracted = parseMcpContent(fullContent);
+    // omniProcessStreamingChunk does not resolve mcp env tags, so you need to process the complete content yourself
+    if (state.contentBuffer.includes('mcp_env')) {
+      const extracted = parseMcpContent(fullContent);
 
-    this.logger.info('extracted', JSON.stringify(extracted, null, 2));
+      this.logger.info('extracted', JSON.stringify(extracted, null, 2));
 
-    const { think, tools, answer } = extracted;
+      tools = extracted.tools;
+    }
 
     return {
-      content: answer ?? fullContent,
+      content: state.accumulatedChatContentBuffer ?? fullContent,
       rawContent: fullContent,
-      reasoningContent: think ?? '',
+      reasoningContent: state.reasoningBuffer ?? '',
       toolCalls: tools,
       finishReason: (tools || []).length > 0 ? 'tool_calls' : 'stop',
     };

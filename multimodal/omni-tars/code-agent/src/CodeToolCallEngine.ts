@@ -3,7 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { parseCodeContent } from '@omni-tars/core';
+import {
+  parseCodeContent,
+  processT5StreamingChunk as omniProcessStreamingChunk,
+  T5StreamProcessingState as OmniStreamProcessingState,
+  createT5InitState as createInitState,
+  SYSTEM_PROMPT_GROUP,
+} from '@omni-tars/core';
 import { ToolCallEngine, Tool, getLogger } from '@tarko/agent';
 import {
   ToolCallEnginePrepareRequestContext,
@@ -21,11 +27,11 @@ import {
 /**
  * Code execution optimized tool call engine
  */
-export class CodeToolCallEngine extends ToolCallEngine {
+export class CodeToolCallEngine extends ToolCallEngine<OmniStreamProcessingState> {
   private logger = getLogger('CodeToolCallEngine');
 
-  preparePrompt(instructions: string, tools: Tool[]): string {
-    return instructions;
+  preparePrompt(instructions: string, tools: Tool[]) {
+    return SYSTEM_PROMPT_GROUP;
   }
 
   prepareRequest(context: ToolCallEnginePrepareRequestContext): ChatCompletionCreateParams {
@@ -41,57 +47,26 @@ export class CodeToolCallEngine extends ToolCallEngine {
     };
   }
 
+  initStreamProcessingState(): OmniStreamProcessingState {
+    return createInitState();
+  }
+
   processStreamingChunk(
     chunk: ChatCompletionChunk,
-    state: StreamProcessingState,
+    state: OmniStreamProcessingState,
   ): StreamChunkResult {
-    const delta = chunk.choices[0]?.delta;
-
-    // Accumulate content
-    if (delta?.content) {
-      state.contentBuffer += delta.content;
-    }
-
-    // Record finish reason
-    if (chunk.choices[0]?.finish_reason) {
-      state.finishReason = chunk.choices[0].finish_reason;
-    }
-
-    // Return incremental content without tool call detection during streaming
-    return {
-      // content: delta?.content || '',
-      content: '',
-      reasoningContent: '',
-      hasToolCallUpdate: false,
-      toolCalls: [],
-    };
+    return omniProcessStreamingChunk(chunk, state);
   }
 
-  finalizeStreamProcessing(state: StreamProcessingState): ParsedModelResponse {
-    const fullContent = state.contentBuffer;
-    this.logger.info('finalizeStreamProcessing content \n', fullContent);
-
-    const extracted = parseCodeContent(fullContent);
-
-    this.logger.info('extracted', JSON.stringify(extracted, null, 2));
-
-    const { think, tools, answer } = extracted;
+  finalizeStreamProcessing(state: OmniStreamProcessingState): ParsedModelResponse {
+    this.logger.info('finalizeStreamProcessing state \n', state);
 
     return {
-      content: answer ?? fullContent,
-      rawContent: fullContent,
-      reasoningContent: think ?? '',
-      toolCalls: tools,
-      finishReason: tools.length > 0 ? 'tool_calls' : 'stop',
-    };
-  }
-
-  initStreamProcessingState(): StreamProcessingState {
-    return {
-      contentBuffer: '',
-      toolCalls: [],
-      reasoningBuffer: '',
-      finishReason: null,
+      content: state.accumulatedChatContentBuffer || '',
+      rawContent: state.contentBuffer,
+      reasoningContent: state.reasoningBuffer ?? '',
+      toolCalls: state.toolCalls,
+      finishReason: (state.toolCalls || []).length > 0 ? 'tool_calls' : 'stop',
     };
   }
 

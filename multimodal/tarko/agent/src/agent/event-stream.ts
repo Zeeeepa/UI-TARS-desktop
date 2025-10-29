@@ -27,6 +27,13 @@ export class AgentEventStreamProcessor implements AgentEventStream.Processor {
 
   constructor(options: AgentEventStream.ProcessorOptions = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
+    
+    // Restore initial events if provided
+    if (options.initialEvents && options.initialEvents.length > 0) {
+      this.events = [...options.initialEvents];
+      this.logger.debug(`EventStream initialized with ${options.initialEvents.length} initial events`);
+    }
+    
     this.logger.debug('EventStream initialized with options:', this.options);
   }
 
@@ -50,7 +57,7 @@ export class AgentEventStreamProcessor implements AgentEventStream.Processor {
    */
   sendEvent(event: AgentEventStream.Event): void {
     this.events.push(event);
-    this.logger.debug(`Event added: ${event.type} (${event.id})`);
+    // this.logger.debug(`Event added: ${event.type} (${event.id})`);
 
     // Notify subscribers
     this.subscribers.forEach((callback) => {
@@ -69,7 +76,7 @@ export class AgentEventStreamProcessor implements AgentEventStream.Processor {
     ) {
       const overflow = this.events.length - this.options.maxEvents;
       this.events = this.events.slice(overflow);
-      this.logger.debug(`Auto-trimmed ${overflow} events`);
+      // this.logger.debug(`Auto-trimmed ${overflow} events`);
     }
   }
 
@@ -203,6 +210,8 @@ export class AgentEventStreamProcessor implements AgentEventStream.Processor {
       this.logger.debug('Unsubscribed from streaming events');
     };
   }
+
+
 
   /**
    * Clear all events from the stream

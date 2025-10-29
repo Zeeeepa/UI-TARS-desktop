@@ -6,7 +6,7 @@
 
 import { ToolCallEngineType } from './tool-call-engine';
 import { Tool } from './tool';
-import { ProviderOptions, LLMReasoningOptions } from '@tarko/model-provider/types';
+import { AgentModel, LLMReasoningOptions } from '@tarko/model-provider/types';
 import { AgentEventStream } from './agent-event-stream';
 import { LogLevel } from '@agent-infra/logger';
 
@@ -66,7 +66,7 @@ export interface AgentModelOptions {
    *
    * @defaultValue {undefined}
    */
-  model?: ProviderOptions;
+  model?: AgentModel;
 
   /**
    * Maximum number of tokens allowed in the context window.
@@ -152,8 +152,10 @@ export interface AgentToolOptions {
 export interface AgentLoopOptions {
   /**
    * Maximum number of iterations of the agent.
+   * Modern LLM models have improved agentic loop-horizon task capabilities,
+   * allowing for more complex multi-step reasoning processes.
    *
-   * @defaultValue `50`
+   * @defaultValue `1000`
    */
   maxIterations?: number;
 }
@@ -182,6 +184,15 @@ export interface AgentMemoryOptions {
    * @defaultValue `false`
    */
   enableStreamingToolCallEvents?: boolean;
+
+  /**
+   * Initial events to restore to the agent's event stream during initialization.
+   * This is useful for restoring conversation context from storage when recreating agent instances.
+   * Events will be restored without triggering subscribers or side effects.
+   *
+   * @defaultValue `undefined`
+   */
+  initialEvents?: AgentEventStream.Event[];
 }
 
 /**
@@ -228,6 +239,13 @@ export interface AgentWorkspaceOptions {
 }
 
 /**
+ * Options for sandbox using in agent tools
+ */
+export interface AgentSandboxOptions {
+  sandboxUrl?: string;
+}
+
+/**
  * Some setting options used to instantiate an Agent.
  */
 export interface AgentOptions
@@ -237,7 +255,8 @@ export interface AgentOptions
     AgentLoopOptions,
     AgentMemoryOptions,
     AgentMiscOptions,
-    AgentWorkspaceOptions {}
+    AgentWorkspaceOptions,
+    AgentSandboxOptions {}
 
 /**
  * Options for configuring agent context behavior (e.g. message history)

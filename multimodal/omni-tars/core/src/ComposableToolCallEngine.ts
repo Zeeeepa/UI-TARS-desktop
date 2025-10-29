@@ -26,6 +26,7 @@ import {
   ToolCallEngineCompositionConfig,
 } from './types';
 import { assert } from 'console';
+import { bypass_native_thinking } from './environments/prompt_t5';
 
 /**
  * Composable Tool Call Engine that orchestrates multiple tool call engines
@@ -33,15 +34,18 @@ import { assert } from 'console';
 export class ComposableToolCallEngine extends ToolCallEngine {
   private logger = getLogger('ComposableToolCallEngine');
   private engines: ToolCallEngineProvider[];
-  private defaultEngine: ToolCallEngineProvider;
+  private defaultEngineProvider: ToolCallEngineProvider;
   private activeEngine?: ToolCallEngine;
 
   constructor(config: ToolCallEngineCompositionConfig) {
     super();
     this.engines = [...config.engines].sort((a, b) => b.priority - a.priority);
-    this.defaultEngine = config.defaultEngine || this.engines[0];
+    this.defaultEngineProvider = config.defaultEngine || this.engines[0];
 
-    assert(this.engines.length > 0 || !!this.defaultEngine, 'No tool call engines available');
+    assert(
+      this.engines.length > 0 || !!this.defaultEngineProvider,
+      'No tool call engines available',
+    );
 
     this.logger.info(`Initialized ComposableToolCallEngine with ${this.engines.length} engines`, {
       engines: this.engines.map((e) => `${e.name}(${e.priority})`),
@@ -60,40 +64,34 @@ export class ComposableToolCallEngine extends ToolCallEngine {
         return engineProvider.getEngine();
       }
     }
-    // this.logger.debug(`Using default engine: ${this.defaultEngine.name}`);
-    return this.defaultEngine.getEngine();
+    this.logger.debug(
+      `No engine matched, using default engine: ${this.defaultEngineProvider.name}`,
+    );
+    return this.defaultEngineProvider.getEngine();
   }
 
-  preparePrompt(instructions: string, tools: Tool[]): string {
+  preparePrompt(instructions: string, tools: Tool[]) {
     return this.selectEngine({ tools }).preparePrompt(instructions, tools);
   }
 
   prepareRequest(context: ToolCallEnginePrepareRequestContext): ChatCompletionCreateParams {
+    // FIXME temporary plan, use this way to avoid model service auto reasoning
+    if (bypass_native_thinking) {
+      context.messages.push({
+        role: 'assistant',
+        content: '',
+      });
+    }
+
     return this.selectEngine({
       tools: context.tools || [],
       messageHistory: context.messages,
     }).prepareRequest(context);
   }
 
-  processStreamingChunk(
-    chunk: ChatCompletionChunk,
-    state: StreamProcessingState,
-  ): StreamChunkResult {
-    return this.selectEngine({
-      toolCalls: state.toolCalls,
-      latestAssistantMessage: state.contentBuffer,
-    }).processStreamingChunk(chunk, state);
-  }
-
-  finalizeStreamProcessing(state: StreamProcessingState): ParsedModelResponse {
-    return this.selectEngine({
-      latestAssistantMessage: state.contentBuffer,
-    }).finalizeStreamProcessing(state);
-  }
-
   initStreamProcessingState(): StreamProcessingState {
     try {
-      return this.selectEngine({}).initStreamProcessingState();
+      return this.defaultEngineProvider.getEngine().initStreamProcessingState();
     } catch (e) {
       this.logger.error('initStreamProcessingState err: ', e);
       return {
@@ -105,10 +103,24 @@ export class ComposableToolCallEngine extends ToolCallEngine {
     }
   }
 
+  processStreamingChunk(
+    chunk: ChatCompletionChunk,
+    state: StreamProcessingState,
+  ): StreamChunkResult {
+    return this.defaultEngineProvider.getEngine().processStreamingChunk(chunk, state);
+  }
+
+  finalizeStreamProcessing(state: StreamProcessingState): ParsedModelResponse {
+    return this.selectEngine({
+      toolCalls: state.toolCalls,
+      latestAssistantMessage: state.contentBuffer,
+    }).finalizeStreamProcessing(state);
+  }
+
   buildHistoricalAssistantMessage(
     currentLoopAssistantEvent: AgentEventStream.AssistantMessageEvent,
   ): ChatCompletionAssistantMessageParam {
-    return this.defaultEngine
+    return this.defaultEngineProvider
       .getEngine()
       .buildHistoricalAssistantMessage(currentLoopAssistantEvent);
   }
@@ -116,7 +128,9 @@ export class ComposableToolCallEngine extends ToolCallEngine {
   buildHistoricalToolCallResultMessages(
     toolCallResults: MultimodalToolCallResult[],
   ): ChatCompletionMessageParam[] {
-    return this.defaultEngine.getEngine().buildHistoricalToolCallResultMessages(toolCallResults);
+    return this.defaultEngineProvider
+      .getEngine()
+      .buildHistoricalToolCallResultMessages(toolCallResults);
   }
 
   /**

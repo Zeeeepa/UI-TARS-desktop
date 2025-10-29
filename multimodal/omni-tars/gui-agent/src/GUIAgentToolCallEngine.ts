@@ -8,13 +8,18 @@ import {
   MultimodalToolCallResult,
   AgentEventStream,
   ChatCompletionMessageParam,
-  ChatCompletionMessageToolCall,
   ParsedModelResponse,
-  StreamProcessingState,
   StreamChunkResult,
 } from '@tarko/agent-interface';
-import { actionParser, actionStringParser } from '@gui-agent/action-parser';
-import { getScreenInfo } from './shared';
+import {
+  processT5StreamingChunk as omniProcessStreamingChunk,
+  T5StreamProcessingState as OmniStreamProcessingState,
+  createT5InitState as createInitState,
+  createSystemPromptGroup,
+  AgentMode,
+} from '@omni-tars/core';
+import { getLogger } from '@tarko/agent';
+import { GUIAgentT5Adapter } from './GUIAgentT5Adapter';
 
 /**
  * SimpleKorToolCallEngine - Minimal prompt engineering tool call engine
@@ -27,11 +32,21 @@ import { getScreenInfo } from './shared';
  * Format used: <tool_call>{"name": "tool_name", "arguments": {...}}</tool_call>
  */
 export class GUIAgentToolCallEngine extends ToolCallEngine {
+  private logger = getLogger('GUIAgentToolCallEngine');
+  private t5Adapter = new GUIAgentT5Adapter(this.logger);
+  private agentMode: AgentMode;
+
+  constructor(...args: unknown[]) {
+    super();
+    const agentMode = args[0] as AgentMode;
+    this.agentMode = agentMode;
+  }
+
   /**
-   * Prepare system prompt with tool information and instructions
+   * Prepare system prompt with tool information and instructions based on agent mode
    */
-  preparePrompt(instructions: string, tools: Tool[]): string {
-    return instructions;
+  preparePrompt(instructions: string, tools: Tool[]) {
+    return createSystemPromptGroup(this.agentMode);
   }
 
   /**
@@ -54,172 +69,41 @@ export class GUIAgentToolCallEngine extends ToolCallEngine {
    *
    * FIXME: move to base tool call engine.
    */
-  initStreamProcessingState(): StreamProcessingState {
-    return {
-      contentBuffer: '',
-      toolCalls: [],
-      reasoningBuffer: '',
-      finishReason: null,
-    };
+  initStreamProcessingState(): OmniStreamProcessingState {
+    return createInitState();
   }
 
   /**
    * Process streaming chunks - simply accumulate content
-   *
-   * FIXME: make it optional
    */
   processStreamingChunk(
     chunk: ChatCompletionChunk,
-    state: StreamProcessingState,
+    state: OmniStreamProcessingState,
   ): StreamChunkResult {
-    const delta = chunk.choices[0]?.delta;
-
-    // Accumulate content
-    if (delta?.content) {
-      state.contentBuffer += delta.content;
-    }
-
-    // Record finish reason
-    if (chunk.choices[0]?.finish_reason) {
-      state.finishReason = chunk.choices[0].finish_reason;
-    }
-
-    // Return incremental content without tool call detection during streaming
-    return {
-      content: '',
-      reasoningContent: '',
-      hasToolCallUpdate: false,
-      toolCalls: [],
-    };
-  }
-
-  /**
-   * Generate a tool call ID
-   */
-  private generateToolCallId(): string {
-    return `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    return omniProcessStreamingChunk(chunk, state);
   }
 
   /**
    * Extract tool calls from complete response text
    */
-  finalizeStreamProcessing(state: StreamProcessingState): ParsedModelResponse {
-    console.log('getScreenInfo()', getScreenInfo());
-
+  finalizeStreamProcessing(state: OmniStreamProcessingState): ParsedModelResponse {
     const fullContent = state.contentBuffer;
-    console.log('fullContent', fullContent);
+    this.logger.debug('finalizeStreamProcessing fullContent:', fullContent);
 
-    const { parsed } = actionParser({
-      prediction: fullContent,
-      factor: [1000, 1000] as [number, number],
-      screenContext: {
-        width: getScreenInfo().screenWidth!,
-        height: getScreenInfo().screenHeight!,
-      },
-    });
+    const toolCalls = state.toolCalls;
+    this.logger.debug('finalizeStreamProcessing toolCalls:', toolCalls);
 
-    console.log('parsed', parsed);
-
-    const actionStrList = actionStringParser(fullContent);
-
-    console.log('actionStrList', actionStrList);
-
-    const toolCalls: ChatCompletionMessageToolCall[] = [];
-
-    let finished = false;
-    let finishMessage: string | null = null;
-    let idx = 0;
-    if (Array.isArray(parsed)) {
-      for (const action of parsed) {
-        idx = idx + 1;
-
-        const cleanedThought = action.thought.replace(/think_never_used_[a-f0-9]{32}>/g, '');
-        if (cleanedThought) {
-          action.thought = cleanedThought;
-        }
-
-        if (action.action_type === 'finished') {
-          finished = true;
-          finishMessage = action.action_inputs.content ?? null;
-          continue;
-        }
-        if (action.action_type === '') {
-          continue;
-        }
-        const toolCallId = this.generateToolCallId();
-        toolCalls.push({
-          id: toolCallId,
-          type: 'function',
-          function: {
-            name: 'browser_vision_control',
-            arguments: JSON.stringify({
-              action: actionStrList[idx - 1],
-              step: action.thought,
-              thought: action.thought,
-              operator_action: action,
-            }),
-          },
-        });
-      }
-    }
-
-    // TODO: Remove this logic after the new model instruction is followed
-    let reasoningContentDraft: string | null = null;
-    let finalMessageContentDraft: string | null = null;
-    if (toolCalls.length <= 0) {
-      if (fullContent.includes('</answer>')) {
-        // First try to match the simple answer format
-        const simpleAnswerMatch = fullContent.match(/<answer>([\s\S]*?)<\/answer>/);
-        let extractedContent: string | null = null;
-        if (simpleAnswerMatch) {
-          extractedContent = simpleAnswerMatch[1].trim();
-        } else {
-          // If no simple format, try the complex format (contains FunctionCallBegin or FCResponseBegin)
-          const functionCallBeginMatch = fullContent.match(
-            /<\|(FunctionCallBegin|FCResponseBegin)\|>([\s\S]*?)(?:<\/answer>|$)/,
-          );
-          if (functionCallBeginMatch) {
-            extractedContent = functionCallBeginMatch[2]; // Use the second capture group, as the first is the tag name
-          }
-        }
-        finished = true;
-        finishMessage = extractedContent;
-        console.log('extractedContent', extractedContent);
-      } else {
-        if (fullContent.includes('<think_never_used_') && fullContent.includes('<think>')) {
-          const thinkNeverUsedMatch = fullContent.match(
-            /<think_never_used_[a-f0-9]{32}>([\s\S]*?)<\/think_never_used_[a-f0-9]{32}>/,
-          );
-          if (thinkNeverUsedMatch) {
-            reasoningContentDraft = thinkNeverUsedMatch[1];
-          }
-          const allThinkMatches = [...fullContent.matchAll(/<think>([\s\S]*?)<\/think>/g)];
-          if (allThinkMatches.length > 0) {
-            const lastThinkMatch = allThinkMatches[allThinkMatches.length - 1];
-            finalMessageContentDraft = lastThinkMatch[1];
-          }
-          if (finalMessageContentDraft && reasoningContentDraft) {
-            finished = true;
-            finishMessage = finalMessageContentDraft.trim();
-          }
-        }
-        console.log('finalMessageContentDraft', finalMessageContentDraft);
-        console.log('reasoningContentDraft', reasoningContentDraft);
-      }
-    }
-
-    const content = finishMessage || (toolCalls.length <= 0 || finished ? fullContent : '');
-    const reasoningContent = reasoningContentDraft ?? parsed[0]?.thought ?? '';
-    const contentForWebUI = content.replace(/\\n|\n/g, '<br>');
-    const reasoningContentForWebUI = reasoningContent.replace(/\\n|\n/g, '');
-
-    // No tool calls found - return regular response
-    return {
-      content: contentForWebUI,
-      rawContent: fullContent,
-      reasoningContent: reasoningContentForWebUI,
+    const convertedToolCalls = this.t5Adapter.convertToBrowserVisionControlCalls(
       toolCalls,
-      finishReason: toolCalls.length > 0 && !finished ? 'tool_calls' : 'stop',
+      state.reasoningBuffer ?? '',
+    );
+
+    return {
+      content: state.accumulatedChatContentBuffer ?? fullContent,
+      rawContent: fullContent,
+      reasoningContent: state.reasoningBuffer ?? '',
+      toolCalls: convertedToolCalls,
+      finishReason: (toolCalls || []).length > 0 ? 'tool_calls' : 'stop',
     };
   }
 
@@ -259,5 +143,12 @@ export class GUIAgentToolCallEngine extends ToolCallEngine {
         content: `Tool "${result.toolName}" result:\n${textContent}`,
       };
     });
+  }
+
+  /**
+   * Generate a tool call ID
+   */
+  private generateToolCallId(): string {
+    return `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 }

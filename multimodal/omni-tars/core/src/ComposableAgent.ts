@@ -31,8 +31,7 @@ export class ComposableAgent extends Agent {
 
     super({
       // instructions: SYSTEM_PROMPT,
-      instructions: composer.generateSystemPrompt(),
-      maxIterations: optionsWithoutPlugins.maxIterations || 100,
+      // instructions: composer.generateSystemPrompt(),
       //Remove plugins to prevent circular reference from reporting errors
       ...optionsWithoutPlugins,
     });
@@ -84,5 +83,14 @@ export class ComposableAgent extends Agent {
     await this.composer.executeOnAgentLoopEnd();
     // Call parent implementation to ensure proper agent loop termination
     await super.onAgentLoopEnd(id);
+  }
+
+  async onAfterToolCall(
+    id: string,
+    toolCall: { toolCallId: string; name: string },
+    result: unknown,
+  ): Promise<any> {
+    // Execute hooks for all plugins
+    return await this.composer.executeOnAfterToolCall(id, toolCall, result);
   }
 }

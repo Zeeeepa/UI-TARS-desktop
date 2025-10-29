@@ -46,23 +46,16 @@ describe('ContextReferenceProcessor', () => {
   });
 
   describe('processContextualReferences', () => {
-    it('should return non-string queries unchanged', async () => {
+    it('should return null for non-string queries', async () => {
       const arrayQuery: ChatCompletionContentPart[] = [{ type: 'text', text: 'hello' }];
       const result = await processor.processContextualReferences(arrayQuery, testWorkspace);
-      expect(result).toMatchInlineSnapshot(`
-        [
-          {
-            "text": "hello",
-            "type": "text",
-          },
-        ]
-      `);
+      expect(result).toBeNull();
     });
 
-    it('should return queries without references unchanged', async () => {
+    it('should return null for queries without references', async () => {
       const query = 'This is a simple query without references';
       const result = await processor.processContextualReferences(query, testWorkspace);
-      expect(result).toMatchInlineSnapshot(`"This is a simple query without references"`);
+      expect(result).toBeNull();
     });
 
     it('should process @file: references successfully', async () => {
@@ -81,10 +74,8 @@ describe('ContextReferenceProcessor', () => {
         `
         "<file path="test1.txt">
         Hello from test1.txt
-        </file>
-
-        Please check @file:test1.txt for content"
-      `,
+        </file>"
+      `
       );
     });
 
@@ -116,10 +107,8 @@ describe('ContextReferenceProcessor', () => {
 
         <file path="test-dir/test2.js">
         const test = "Hello from test2.js";
-        </file>
-
-        Check @file:test1.txt and @file:test-dir/test2.js"
-      `,
+        </file>"
+      `
       );
     });
 
@@ -145,7 +134,6 @@ const test = "Hello from test2.js";
 
       expect(result).toContain('<directory path="test-dir">');
       expect(result).toContain('Workspace Content Summary');
-      expect(result).toContain('Analyze @dir:test-dir directory');
     });
 
     it('should handle non-existent file references gracefully', async () => {
@@ -161,10 +149,8 @@ const test = "Hello from test2.js";
         `
         "<file path="non-existent.txt">
         Error: File not found
-        </file>
-
-        Check @file:non-existent.txt"
-      `,
+        </file>"
+      `
       );
       expect(consoleSpy).toHaveBeenCalledWith('File reference not found: non-existent.txt');
 
@@ -181,10 +167,8 @@ const test = "Hello from test2.js";
         `
         "<file path="../../../etc/passwd">
         Error: File reference outside workspace
-        </file>
-
-        Check @file:../../../etc/passwd"
-      `,
+        </file>"
+      `
       );
       expect(consoleSpy).toHaveBeenCalledWith(
         'File reference outside workspace: ../../../etc/passwd',
@@ -199,7 +183,7 @@ const test = "Hello from test2.js";
       const query = 'Analyze @dir:../../../etc';
       const result = await processor.processContextualReferences(query, testWorkspace);
 
-      expect(result).toMatchInlineSnapshot(`"Analyze @dir:../../../etc"`);
+      expect(result).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
         'Directory reference outside workspace: ../../../etc',
       );
@@ -227,10 +211,8 @@ const test = "Hello from test2.js";
         `
         "<file path="restricted.txt">
         Error: Failed to read file
-        </file>
-
-        Check @file:restricted.txt"
-      `,
+        </file>"
+      `
       );
       expect(consoleSpy).toHaveBeenCalledWith(
         'Failed to read file restricted.txt:',
@@ -255,10 +237,8 @@ const test = "Hello from test2.js";
         `
         "<directory path="test-dir">
         Error: Failed to pack directory
-        </directory>
-
-        Analyze @dir:test-dir"
-      `,
+        </directory>"
+      `
       );
       expect(consoleSpy).toHaveBeenCalledWith('Failed to pack workspace paths:', expect.any(Error));
 
@@ -289,7 +269,6 @@ const test = "Hello from test2.js";
 
       expect(result).toContain('Hello from test1.txt');
       expect(result).toContain('Directory content here');
-      expect(result).toContain('Check @file:test1.txt and analyze @dir:test-dir');
     });
 
     it('should handle references with special regex characters', async () => {
@@ -308,10 +287,8 @@ const test = "Hello from test2.js";
         `
         "<file path="test[special].txt">
         special content
-        </file>
-
-        Check @file:test[special].txt"
-      `,
+        </file>"
+      `
       );
     });
   });

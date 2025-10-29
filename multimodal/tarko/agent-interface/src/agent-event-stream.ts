@@ -154,6 +154,15 @@ export namespace AgentEventStream {
 
     /** Whether the thinking process is complete */
     isComplete?: boolean;
+
+    /** Duration of the thinking process in milliseconds */
+    thinkingDurationMs?: number;
+
+    /**
+     * Unique message identifier that links thinking messages to their session
+     * This allows clients to correlate incremental updates with complete thinking
+     */
+    messageId?: string;
   }
 
   /**
@@ -186,6 +195,12 @@ export namespace AgentEventStream {
 
     /** Whether this is the final reasoning chunk */
     isComplete?: boolean;
+
+    /**
+     * Unique message identifier that links streaming thinking messages to their final thinking
+     * This allows clients to correlate incremental updates with complete thinking
+     */
+    messageId?: string;
   }
 
   /**
@@ -352,8 +367,8 @@ export namespace AgentEventStream {
    */
   export interface ScreenshotMetadata extends BaseEnvironmentInputMetadata {
     type: 'screenshot';
-    /** Device pixel ratio for the screenshot */
-    devicePixelRatio?: number;
+    /** URL of the webpage being captured in the screenshot */
+    url?: string;
   }
 
   /**
@@ -598,6 +613,9 @@ export namespace AgentEventStream {
 
     /** Whether to automatically trim old events */
     autoTrim?: boolean;
+
+    /** Initial events to restore when creating the event stream */
+    initialEvents?: AgentEventStream.Event[];
   }
 
   /**
