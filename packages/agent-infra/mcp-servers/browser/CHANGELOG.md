@@ -1,5 +1,35 @@
 # @agent-infra/mcp-server-browser
 
+## 1.2.29
+
+### Patch Changes
+
+- Update browser server package
+
+## 1.2.28
+
+### Patch Changes
+
+- fix: bugs
+
+## 1.2.26
+
+### Patch Changes
+
+- fix(browser-mcp): outputDir lost
+
+## 1.2.25
+
+### Patch Changes
+
+- fix(browser-mcp): fix download list retrieval and path issues
+
+## 1.2.24
+
+### Patch Changes
+
+- feat: set remote browser viewport to default viewport
+
 ## 1.2.23
 
 ### Patch Changes
